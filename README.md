@@ -2,6 +2,8 @@
 
 # FANTASMA | LAB-017 — ANONYMOUS
 
+**TryHackMe | FANTASMA LAB-017 ANONYMOUS | Parrot OS, Nmap, FTP anónimo escribible, SMB con recurso pics, clean.sh periódico como namelessone, enumeración SUID y /usr/bin/env con bash -p | User flag y root.txt recuperados por FTP; shell interactiva root pendiente | 4 puertos abiertos | CVE no confirmada**
+
 **Autor:** FANTASMA  
 **Plataforma:** TryHackMe  
 **Máquina:** Anonymous  
