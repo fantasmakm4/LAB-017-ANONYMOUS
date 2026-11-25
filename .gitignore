@@ -1,2 +1,6 @@
-05-Evidencias/privado/
+# Evidence and flags stay local
+05-Evidencias/privado/*
+!05-Evidencias/privado/.gitkeep
+user_flag.txt
+root_flag.txt
 clean.sh
