@@ -1,58 +1,72 @@
 # Informe técnico — LAB-017 Anonymous
 
-## Ficha
+## Ficha del laboratorio
 
 - Plataforma: TryHackMe
 - Máquina: Anonymous
 - IP observada: 10.66.183.251 (sesión dinámica)
-- Atacante: Parrot Security OS
-- Resultado: user.txt y root.txt leídos; shell interactiva root no obtenida
-- CVE: ninguna confirmada
+- Sistema atacante: Parrot Security OS
+- Dificultad: principiante / fácil
+- Fecha: 25/11/2026
+- CVE: no confirmada
+- Resultado: user.txt y root.txt recuperados mediante copias FTP; shell interactiva root pendiente
+
+## Objetivo y alcance
+
+Enumerar los servicios de la máquina asignada en TryHackMe, analizar los recursos FTP/SMB accesibles, identificar una ruta de acceso y evaluar la escalada de privilegios. Todas las pruebas se realizaron contra la IP del laboratorio.
 
 ## Resumen ejecutivo
 
-La máquina expuso FTP, SSH y SMB. El servidor FTP permitió inicio anónimo; su carpeta scripts era escribible. El recurso SMB pics permitió descargar corgo2.jpg y puppos.jpeg. La ruta útil pasó por clean.sh, que se ejecutaba periódicamente como namelessone, y por el binario SUID /usr/bin/env. Con env se lanzó Bash en modo privilegiado y se copió /root/root.txt a una ruta legible por FTP. Se recuperaron ambos valores de bandera, que se mantienen fuera de Git.
+El escaneo identificó cuatro puertos abiertos: FTP (21), SSH (22), SMB (139) y SMB (445). FTP aceptaba login anónimo y permitía escribir en /scripts. La carpeta contenía clean.sh, removed_files.log y to_do.txt. El registro fue creciendo mientras se observaba el servicio, lo que confirmó ejecución periódica del script. Un inventario ejecutado por el script identificó la cuenta namelessone (uid 1000), sudo con contraseña requerida y varios binarios SUID, incluido /usr/bin/env.
 
-## Servicios
+La cuenta obtuvo user.txt a través de una copia en el directorio FTP. Para root, se abusó del SUID de env y bash -p para copiar /root/root.txt a un archivo descargable por FTP. Esto confirma la lectura de root.txt mediante una orden privilegiada, pero no una shell interactiva root. Los valores de las dos banderas se mantienen fuera de Git.
+
+## Servicios observados
 
 | Puerto | Servicio | Versión / resultado |
 |---|---|---|
-| 21/tcp | FTP | vsftpd 3.0.3; login anónimo permitido |
+| 21/tcp | FTP | vsftpd 3.0.3; anonymous permitido |
 | 22/tcp | SSH | OpenSSH 7.6p1 Ubuntu 4ubuntu0.3 |
 | 139/tcp | SMB | Samba smbd 3.X–4.X |
 | 445/tcp | SMB | Samba 4.7.6-Ubuntu |
 
 ## Hallazgos
 
-### H-01 — Escritura FTP anónima
+### H-01 — FTP anónimo con escritura
 
-La cuenta anonymous pudo acceder a /scripts. El listado mostró clean.sh con permisos de escritura para otros usuarios. La nota to_do.txt advertía que el login anónimo debía deshabilitarse.
+La sesión anonymous fue aceptada. En la raíz FTP se encontró scripts con permisos de escritura. Dentro había clean.sh con permisos -rwxr-xrwx. to_do.txt contenía una nota que advertía que el acceso anónimo debía deshabilitarse.
 
-### H-02 — Recurso SMB accesible
+**Impacto:** un usuario no autenticado podía modificar un script ejecutado periódicamente.
 
-La enumeración SMB listó pics. Se descargaron corgo2.jpg y puppos.jpeg. ExifTool mostró metadatos de imagen; steghide no extrajo datos al probar una frase vacía. No se usaron estas imágenes para escalar.
+### H-02 — Recurso SMB pics accesible
 
-### H-03 — Script periódico y usuario namelessone
+La enumeración SMB identificó print$, pics e IPC$. En pics se encontraron corgo2.jpg y puppos.jpeg. Se descargaron para análisis; los metadatos no dieron credenciales y steghide no encontró datos al probar frase vacía.
 
-El archivo clean.sh podía reemplazarse mediante FTP y era ejecutado por un proceso periódico. La salida de id registrada por el script identificó uid 1000 (namelessone). La cuenta tenía grupo lxd y sudo requería contraseña.
+**Impacto:** archivos del recurso estaban disponibles sin autenticación.
 
-### H-04 — SUID /usr/bin/env
+### H-03 — clean.sh ejecutado como namelessone
 
-La enumeración de SUID encontró /usr/bin/env. Ejecutarlo para iniciar Bash con -p permitió leer /root/root.txt y copiarlo al directorio FTP. Esto confirma ejecución de una orden privilegiada. No se obtuvo una shell interactiva root.
+El script se ejecutaba periódicamente y pudo sustituirse mediante FTP. La ejecución de un inventario registró uid 1000, usuario namelessone. Se recuperó user.txt al colocar una copia en la carpeta FTP.
+
+### H-04 — SUID de /usr/bin/env
+
+El inventario de permisos especiales encontró /usr/bin/env con SUID. sudo -n -l indicó que se requería contraseña. Bash iniciado con -p mediante env conservó privilegios suficientes para leer /root/root.txt y copiarlo a la carpeta FTP.
+
+**Estado:** root.txt fue leído; no se consiguió una shell interactiva root.
 
 ## Cuestionario TryHackMe
 
 - Puertos abiertos: 4
-- Servicio en 21: FTP
+- Servicio en el puerto 21: FTP
 - Servicio en 139 y 445: SMB
 - Recurso compartido: pics
 
 ## Recomendaciones
 
-1. Deshabilitar FTP anónimo y retirar permisos de escritura a usuarios no autenticados.
-2. Separar los directorios de intercambio de los scripts ejecutados por tareas periódicas.
-3. Auditar scripts, permisos SUID y grupos privilegiados como lxd.
-4. Restringir el uso de /usr/bin/env con SUID y eliminar permisos especiales innecesarios.
-5. Monitorizar cambios en scripts ejecutables y tareas programadas.
-6. No publicar contraseñas ni valores de flags.
+1. Deshabilitar FTP anónimo.
+2. Denegar escritura anónima y retirar scripts ejecutables de directorios FTP.
+3. Separar archivos cargados de tareas programadas.
+4. Revisar el uso del bit SUID en /usr/bin/env.
+5. Auditar periódicamente grupos privilegiados, incluidos lxd y sudo.
+6. No publicar valores de flags ni evidencias que contengan credenciales.
 

@@ -2,57 +2,80 @@
 
 # FANTASMA | LAB-017 — ANONYMOUS
 
+**Autor:** FANTASMA  
 **Plataforma:** TryHackMe  
 **Máquina:** Anonymous  
-**IP de esta sesión:** 10.66.183.251  
-**Dificultad:** Fácil  
-**Sistema:** Linux (Ubuntu/Samba)  
-**Estado:** User flag y root.txt recuperados mediante archivos; shell interactiva root pendiente  
+**IP de sesión:** 10.66.183.251 (dinámica)  
+**Sistema atacante:** Parrot Security OS  
+**Dificultad:** Principiante / Fácil  
+**Estado:** User flag y root.txt recuperados; shell interactiva root pendiente  
 **CVE:** No confirmada
 
 ## Descripción de la portada
 
-Infografía panorámica con el avatar FANTASMA —calavera encapuchada, cuernos, ojos rojos, alas, luna roja y portátil— sobre fondo oscuro con paneles neón cian y magenta. La ruta se cuenta en seis etapas: reconocimiento con Nmap y los cuatro puertos; enumeración de FTP anónimo y SMB/pics; ejecución periódica de clean.sh como namelessone; identificación del SUID /usr/bin/env; lectura de root.txt mediante bash -p; y estado real del acceso. El terminal representa uid 1000 namelessone y la lectura de root.txt, sin afirmar que se obtuvo una shell interactiva root. La portada también muestra IP de sesión y que no se confirmó una CVE. No incluye valores de banderas.
+Infografía panorámica con el avatar FANTASMA —calavera encapuchada, cuernos, ojos rojos, alas, luna roja y portátil— sobre fondo oscuro y paneles neón cian/magenta. Los seis pasos describen el trabajo real: Nmap identifica 21/FTP, 22/SSH y 139/445/SMB; SMB expone pics; FTP anónimo permite escribir en scripts; clean.sh periódico opera como namelessone; se identifica el SUID /usr/bin/env; y bash -p permite leer root.txt. El terminal muestra uid 1000 (namelessone). El cierre declara que root.txt fue leído y que no se obtuvo una shell interactiva root. La portada muestra IP de sesión y CVE no confirmada. No expone flags ni credenciales.
 
-## Resumen del laboratorio
+## Objetivo
 
-La enumeración detectó cuatro puertos abiertos. FTP permitió acceso anónimo y escritura en /scripts; SMB expuso el recurso pics. El script clean.sh se ejecutaba periódicamente como namelessone. La escalada local aprovechó el SUID de /usr/bin/env para ejecutar bash con privilegios y copiar root.txt a un archivo descargable por FTP. Se recuperaron los valores de ambas banderas. No se obtuvo una sesión interactiva como root.
+Enumerar la máquina, identificar la exposición de servicios, recuperar las banderas y documentar hasta dónde llegó la escalada en el laboratorio autorizado de TryHackMe.
 
-## Puertos y servicios
+## Resumen ejecutivo
 
-| Puerto | Servicio | Identificación observada |
+Nmap detectó cuatro puertos abiertos. FTP permitió acceso anónimo a /scripts, una carpeta escribible que contenía clean.sh. El script se ejecutaba periódicamente como namelessone. SMB ofrecía el recurso pics con dos imágenes, que no resultaron necesarias para el compromiso. La enumeración local encontró /usr/bin/env con SUID. Se usó env para ejecutar Bash con privilegios y copiar /root/root.txt a un archivo descargable mediante FTP. Se recuperaron los contenidos de user.txt y root.txt. No se obtuvo una sesión interactiva como root, por lo que el repositorio no afirma que esa shell se haya conseguido.
+
+## Reconocimiento de servicios
+
+| Puerto | Servicio | Versión / observación |
 |---|---|---|
-| 21/tcp | FTP | vsftpd 3.0.3; acceso anónimo |
+| 21/tcp | FTP | vsftpd 3.0.3; acceso anónimo permitido |
 | 22/tcp | SSH | OpenSSH 7.6p1 Ubuntu 4ubuntu0.3 |
 | 139/tcp | SMB | Samba smbd 3.X–4.X |
 | 445/tcp | SMB | Samba 4.7.6-Ubuntu |
 
-## Cadena observada
+El escaneo y el inventario SUID completos están en 02-Reconocimiento.
 
-1. Escaneo Nmap de los 100 puertos TCP más comunes.
-2. Listado de recursos SMB; se encontró pics.
-3. Enumeración FTP anónima; /scripts resultó escribible.
-4. Descarga y análisis de clean.sh, removed_files.log y to_do.txt.
-5. Ejecución periódica de clean.sh como namelessone; recuperación de user.txt.
-6. Enumeración de permisos SUID; /usr/bin/env permitió ejecutar bash en modo privilegiado y copiar root.txt a una ruta legible por FTP.
+## Ruta de trabajo
 
-## Hallazgos principales
+1. **Reconocimiento:** Nmap revisó los 100 puertos TCP más comunes y detectó FTP, SSH y SMB.
+2. **Enumeración SMB:** se listaron los recursos y se encontró pics. Se descargaron corgo2.jpg y puppos.jpeg.
+3. **Enumeración FTP:** el login anonymous tuvo éxito. /scripts permitía escritura y contenía clean.sh, removed_files.log y to_do.txt.
+4. **Acceso de usuario:** clean.sh se ejecutaba periódicamente. La ejecución del inventario identificó uid 1000, namelessone. Se recuperó user.txt a través del directorio FTP.
+5. **Escalada local:** sudo requería contraseña. La lista SUID incluía /usr/bin/env; con bash -p se leyó /root/root.txt y se copió a un archivo legible por FTP.
+6. **Estado final:** ambas banderas se recuperaron; la shell interactiva root no se obtuvo.
 
-- El acceso anónimo FTP permitía leer y escribir en un directorio del servidor.
-- El recurso SMB pics permitía leer dos imágenes.
-- clean.sh era modificable desde FTP y se ejecutaba periódicamente.
-- La cuenta namelessone pertenecía, entre otros, al grupo lxd; sudo requería contraseña.
-- /usr/bin/env tenía SUID. Se usó para ejecutar una orden con privilegios y copiar root.txt.
-- Las imágenes no mostraron datos ocultos con steghide al probar una frase vacía; esa vía no fue necesaria para el resultado.
+## Hallazgos
 
-## Evidencias y documentos
+- FTP anónimo habilitado y directorio de scripts modificable.
+- El archivo clean.sh podía sustituirse por anonymous y era ejecutado periódicamente.
+- SMB permitía enumerar y leer el recurso pics.
+- namelessone pertenecía a los grupos adm, sudo, lxd, entre otros; sudo solicitaba contraseña.
+- /usr/bin/env tenía SUID, lo que permitió ejecutar una orden con privilegios y leer root.txt.
+- ExifTool mostró metadatos de las imágenes. Steghide no extrajo contenido con frase vacía; la esteganografía no formó parte de la ruta útil.
+- No se confirmó una CVE aplicable.
+
+## Herramientas utilizadas
+
+Nmap, smbclient, cliente FTP, ExifTool, steghide, Bash y el análisis de permisos SUID.
+
+## Documentación
 
 - [Informe técnico](01-Informes/INFORME-TECNICO.md)
 - [Reconocimiento](02-Reconocimiento/RECONOCIMIENTO.md)
 - [Explotación y escalada](03-Explotacion/EXPLOTACION-Y-ESCALADA.md)
-- [Descripción de portada](04-Imagenes/README.md)
+- [Descripción de la portada](04-Imagenes/README.md)
 - [Evidencias públicas](05-Evidencias/publico/README.md)
-- [Comandos ejecutados](06-Comandos/COMANDOS.md)
+- [Comandos](06-Comandos/COMANDOS.md)
 - [Sala TryHackMe](https://tryhackme.com/room/anonymous)
 
-Los valores de las banderas y los archivos privados quedan excluidos del repositorio.
+## Recomendaciones
+
+1. Deshabilitar FTP anónimo y eliminar la escritura para usuarios no autenticados.
+2. Separar los directorios de intercambio de cualquier script ejecutado automáticamente.
+3. Auditar tareas periódicas, propietarios y permisos de scripts.
+4. Retirar el bit SUID de /usr/bin/env si no es necesario y revisar los binarios SUID.
+5. Revisar la pertenencia de usuarios ordinarios al grupo lxd y otros grupos privilegiados.
+6. No dejar archivos de banderas ni credenciales en directorios FTP públicos.
+
+---
+
+**FANTASMA | LAB-017 | ANONYMOUS | Banderas recuperadas; shell interactiva root pendiente**

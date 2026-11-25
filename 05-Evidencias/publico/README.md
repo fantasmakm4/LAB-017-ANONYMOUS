@@ -1,3 +1,13 @@
-# Evidencias públicas
+# Evidencias públicas — LAB-017 Anonymous
 
-Este directorio contiene resúmenes técnicos que no exponen credenciales ni valores de banderas. Los artefactos verificables disponibles están en 02-Reconocimiento y 03-Explotacion. Los valores de user.txt y root.txt se mantienen en la carpeta local privada, excluida de Git.
+Esta carpeta contiene resúmenes descriptivos sin valores de flags ni credenciales.
+
+## Evidencias documentadas
+
+- Escaneo Nmap: 02-Reconocimiento/nmap-inicial.txt.
+- Enumeración de cuenta, sudo y SUID: 02-Reconocimiento/enum-suid.txt.
+- Resumen de hallazgos: hallazgos.md.
+- Secuencia explicada: 03-Explotacion/EXPLOTACION-Y-ESCALADA.md.
+- Comandos: 06-Comandos/COMANDOS.md.
+
+Los valores de user.txt y root.txt permanecen en la carpeta privada local, excluida de Git.
